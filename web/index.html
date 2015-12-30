@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no, width=device-width"/>
+    <title>水联网 Internet of Water</title>
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
+    -->
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.3/css/materialize.min.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.14/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.14/esri/css/esri.css">
+
+    <!--  CDN 3.12
+    <link rel="stylesheet" href="http://jsapi.thinkgis.cn/esri/css/esri.css">
+    -->
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="js/materialize.js"></script>
+    <script src="http://js.arcgis.com/3.14/"></script>
+    <!--  CDN 3.12
+    <script src="http://jsapi.thinkgis.cn/init.js"></script>
+    -->
+    <script type="text/javascript">
+        dojoConfig = {
+            locale: "zh-cn",
+            parseOnLoad: true,
+            async: true
+        };
+    </script>
+    <script>
+        $(function () {
+            $("#mapDiv").css("top", $("nav").css("height"));
+            $('select').material_select();
+            //$("#mapDiv .card").css("max-height", $("#mapDiv").css("height"));
+        });
+
+        var map;
+        var basicGroup, slhGroup;
+        var global = "global";
+        var allLayers = [];
+
+        var functionController = {
+            now: undefined,
+            start: function (fun) {
+                if (fun === this.now) {
+                    console.log("功能已启用");
+                    return;
+                }
+                if (this.now) {
+                    this.now.stop();
+                }
+                this.now = fun;
+                fun.start();
+            },
+            stop: function (fun) {
+                if (fun === this.now) {
+                    fun.stop();
+                    this.now = undefined;
+                } else {
+                    console.log("非当启用的功能，无法停止");
+                }
+            }
+        };
+
+        function LLayer(name, showName, group, url, show) {
+            this.name = name;
+            this.showName = showName;
+            this.url = url;
+            this.show = show || false;
+            this.discription = "";
+            this.func = [];
+            this.domName = name + "-row";
+            var that = this;
+            $(function () {
+                that.check = $("#" + that.domName + " input");
+                that.check.attr("checked", that.show);
+            });
+            group.addLayer(this);
+        }
+        LLayer.prototype.addFunction = function (func) {
+            this.func.push(func);
+        };
+
+        function FFunction(name, showName, owner, init, start, stop) {
+            this.name = name;
+            this.showName = showName;
+            this.owner = owner;
+            this.init = init || function () {
+                    };
+            this.start = start || function () {
+                    };
+            this.stop = stop || function () {
+                    };
+            this.domBtnName = name + "-btn";
+            var that = this;
+            $(function () {
+                that.domBtn = $("#" + that.domBtnName);
+                that.domBtn.click(function () {
+                    functionController.start(that);
+                });
+            });
+            if (owner instanceof LLayer) {
+                owner.addFunction(this);
+            }
+            this.init();
+        }
+
+        function LayerGroup(name) {
+            this.name = name;
+            this.layers = [];
+            this.discription = "";
+            this.tabDomName = name + "-tab";
+            this.contentDomName = name + "-content";
+            var that = this;
+            $(function () {
+                that.tab = $(".low-tabs .tab#" + that.tabDomName);
+                that.content = $(".low-tabcontent#" + that.contentDomName);
+                if (that.tab.hasClass("active")) {
+                    that.content.removeClass("hide");
+                } else {
+                    that.content.addClass("hide");
+                }
+                that.tab.click(function () {
+                    that.tab.addClass("active");
+                    that.content.removeClass("hide");
+                    $(".low-tabs .tab[id!=" + that.tabDomName + "]").removeClass("active");
+                    $(".low-tabcontent[id!=" + that.contentDomName + "]").addClass("hide");
+                });
+            });
+        }
+        LayerGroup.prototype.addLayer = function (llayer) {
+            this.layers.push(llayer);
+        };
+
+        require([
+            "esri/map",
+            "esri/layers/ArcGISDynamicMapServiceLayer",
+            "esri/dijit/BasemapGallery",
+            "esri/arcgis/utils",
+            "esri/dijit/Scalebar",
+            "esri/dijit/Geocoder",
+            "esri/dijit/LayerList",
+            "esri/toolbars/draw",
+            "esri/symbols/SimpleLineSymbol",
+            "esri/symbols/SimpleMarkerSymbol",
+            "esri/symbols/CartographicLineSymbol",
+            "esri/graphic",
+            "esri/dijit/ElevationProfile",
+            "esri/Color",
+            "esri/units",
+            "dojo/on",
+            "esri/TimeExtent",
+            "esri/dijit/TimeSlider",
+            "dojo/_base/array",
+            "dojo/dom",
+            "dojo/domReady!"
+        ], function (Map,
+                     ArcGISDynamicMapServiceLayer,
+                     BasemapGallery,
+                     arcgisUtils,
+                     Scalebar,
+                     Geocoder,
+                     LayerList,
+                     Draw,
+                     SimpleLineSymbol,
+                     SimpleMarkerSymbol,
+                     CartographicLineSymbol,
+                     Graphic,
+                     ElevationsProfileWidget,
+                     Color,
+                     Units,
+                     on,
+                     TimeExtent,
+                     TimeSlider,
+                     arrayUtils,
+                     dom) {
+
+            map = new Map("mapDiv", {
+                basemap: "topo",
+                center: [90, 30],
+                zoom: 3,
+                logo: false
+            });
+
+            var basemapGallery = new BasemapGallery({
+                showArcGISBasemaps: true,
+                map: map
+            }, "basemap-gallery");
+            basemapGallery.startup();
+            var scalebar = new Scalebar({
+                map: map,
+                attachTo: "bottom-left",
+                scalebarUnit: "metric"
+            });
+            /*
+             var geocoder = new Geocoder({
+             map: map,
+             autoComplete: true,
+             }, "search");
+             geocoder.startup();*/
+
+            LLayer.prototype.init = function (index) {
+                this.layer = new ArcGISDynamicMapServiceLayer(this.url, {
+                    visible: this.show,
+                    id: this.showName
+                });
+                map.addLayer(this.layer, index);
+                var that = this;
+                this.check.click(function () {
+                    that.layer.setVisibility(!that.layer.visible);
+                    that.show = that.layer.visible;
+                });
+                allLayers.push(this.layer);
+                return this;
+            };
+
+            basicGroup = new LayerGroup("basic");
+            slhGroup = new LayerGroup("slh");
+
+            var riverLayer = new LLayer("river", "数字河网", basicGroup, "http://101.6.54.28:6080/arcgis/rest/services/gdn/Hydro30/MapServer", true).init(4);
+            var demLayer = new LLayer("dem", "数字高程", basicGroup, "http://101.6.54.28:6080/arcgis/rest/services/gdn/GDEM/MapServer", false).init(1);
+            var forcastLayer = new LLayer("forcast", "气象预报", basicGroup, "http://101.6.54.28:6080/arcgis/rest/services/Precipitation/forcast_sample/MapServer", false).init(2);
+            var queryDemFunc = new FFunction("query-dem", "高程查询", demLayer);
+            queryDemFunc.start = function () {
+                alert("start!");
+            };
+
+            //-----------------------------------------------------------------------------------
+            //------------------                疏勒河渠道和田块              --------------------
+            //-----------------------------------------------------------------------------------
+            var demLayer = new LLayer("qudao", "渠道和田块", slhGroup, "http://101.6.54.28:6080/arcgis/rest/services/SLH/疏勒河渠和田块/MapServer/", false).init(3);
+            $("#slh-content .function a").click(function () {
+                map.centerAndZoom([97.04, 40.27], 11);
+            });
+            //-----------------------------------------------------------------------------------
+            //------------------                 绘制高程纵断线                --------------------
+            //-----------------------------------------------------------------------------------
+            var tb, epWidget, lineSymbol;
+
+            function initToolbar(toolName) {
+                epWidget.clearProfile(); //Clear profile
+                map.graphics.clear();
+                tb = new Draw(map);
+                tb.on("draw-end", addGraphic);
+                tb.activate(toolName);
+                map.disableMapNavigation();
+            }
+
+            function addGraphic(evt) {
+                //deactivate the toolbar and clear existing graphics
+                tb.deactivate();
+                map.enableMapNavigation();
+                $("#ele-profile-info .card-action a:first").addClass("disabled");
+                var symbol = lineSymbol;
+                map.graphics.add(new Graphic(evt.geometry, symbol));
+                epWidget.set("profileGeometry", evt.geometry);
+                var sel = dom.byId("unitsSelect");
+                if (sel) {
+                    var val = sel.options[sel.selectedIndex].value;
+                    epWidget.set("measureUnits", val);
+                }
+            }
+
+            $("#unitsSelect").parent().change(function (evt) {
+                if (epWidget) {
+                    epWidget.set("measureUnits", evt.target.options[evt.target.selectedIndex].value);
+                }
+            });
+            lineSymbol = new CartographicLineSymbol(
+                    CartographicLineSymbol.STYLE_SOLID,
+                    new Color([255, 0, 0]), 2,
+                    CartographicLineSymbol.CAP_ROUND,
+                    CartographicLineSymbol.JOIN_MITER, 2
+            );
+            var profileParams = {
+                map: map,
+                profileTaskUrl: "https://elevation.arcgis.com/arcgis/rest/services/Tools/ElevationSync/GPServer",
+                scalebarUnits: Units.MILES
+            };
+
+            var epFunction = new FFunction("ele-profile", "高程纵断面", demLayer, function () {
+                this.domInfo = $("#ele-profile-info");
+                var that = this;
+                $("#ele-profile-info .card-action a:last").click(function () {
+                    functionController.stop(that);
+                    that.domInfo.addClass("hide");
+                    $("#ele-profile-chart").addClass("hide");
+                    $("#mapDiv").css("bottom", "0");
+                });
+                $("#ele-profile-info .card-action a:first").click(function () {
+                    if (tb) {
+                        tb.deactivate();
+                    }
+                    map.enableMapNavigation();
+                    $("#ele-profile-info .card-action a:first").addClass("disabled");
+                });
+            });
+            epFunction.start = function () {
+                if (this.domInfo.hasClass("hide")) {
+                    this.domInfo.removeClass("hide");
+                    $("#ele-profile-chart").removeClass("hide");
+                    $("#mapDiv").css("bottom", $("#ele-profile-chart").css("height"));
+                }
+                if (!epWidget) {
+                    epWidget = new ElevationsProfileWidget(profileParams, "ele-profile-chart");
+                    epWidget.startup();
+                }
+            };
+            epFunction.stop = function () {
+                if (tb) {
+                    tb.deactivate();
+                }
+                $("#ele-profile-info .card-action a:first").addClass("disabled");
+                map.enableMapNavigation();
+                epWidget.clearProfile();
+                map.graphics.clear();
+            };
+            var eleList = ["Polyline", "FreehandPolyline"];
+            for (var ele in eleList) {
+                on(dom.byId(eleList[ele]), "click", function (evt) {
+                    functionController.start(epFunction);
+                    initToolbar(evt.target.id.toLowerCase());
+                    $("#ele-profile-info .card-action a:first").removeClass("disabled");
+                });
+            }
+
+            //-----------------------------------------------------------------------------------
+            //------------------                    图层列表                  --------------------
+            //-----------------------------------------------------------------------------------
+            var layerListFunc = new FFunction("layer-list", null, global, function () {
+                var myWidget = new LayerList({
+                    map: map
+                    //layers: allLayers
+                }, "layer-list-content");
+                myWidget.startup();
+                this.dom = $("#layer-list");
+                this.widget = myWidget;
+                var that = this;
+                $("#layer-list .card-action a").click(function () {
+                    that.dom.addClass("hide");
+                    functionController.stop(that);
+                });
+            });
+            layerListFunc.start = function () {
+                this.dom.removeClass("hide");
+                this.widget.refresh();
+            };
+
+            //-----------------------------------------------------------------------------------
+            //------------------                   气象播放                    --------------------
+            //-----------------------------------------------------------------------------------
+            var forcastPlayFunc = new FFunction("forcast-play", "气象播放", null, function () {
+                var timeSlider = new TimeSlider({}, dom.byId("time-slider"));
+                map.setTimeSlider(timeSlider);
+
+                var timeExtent = new TimeExtent();
+                timeExtent.startTime = new Date("12/11/2015 UTC");
+                timeExtent.endTime = new Date("12/25/2015 18:00:00 UTC");
+                timeSlider.setThumbCount(1);
+                timeSlider.createTimeStopsByTimeInterval(timeExtent, 6, "esriTimeUnitsHours");
+                timeSlider.setThumbIndexes([0]);
+                timeSlider.setThumbMovingRate(2000);
+                timeSlider.startup();
+
+                //add labels for every other time stop
+                var labels = arrayUtils.map(timeSlider.timeStops, function (timeStop, i) {
+                    if (i % 4 === 0) {
+                        return timeStop.getUTCMonth() + '-' + timeStop.getUTCDate();
+                    } else {
+                        return "";
+                    }
+                });
+
+                timeSlider.setLabels(labels);
+
+            });
+
+            forcastPlayFunc.start = function () {
+                $("#time-slider-card").removeClass("hide");
+            };
+
+            //-----------------------------------------------------------------------------------
+            //------------------                 天气预报查询                  --------------------
+            //-----------------------------------------------------------------------------------
+            var forcastQueryFunc = new FFunction("forcast-query", "预报降水查询", null, function () {
+                this.draw = new Draw(map);
+            });
+            forcastQueryFunc.start = function () {
+                this.draw.activate('point');
+                map.disableMapNavigation();
+                this.draw.on("draw-end", function (evt) {
+                    map.enableMapNavigation();
+                    var simbol = new SimpleMarkerSymbol("solid", 15, null, new Color([238, 69, 0, 0.5]));
+                    map.graphics.add(new Graphic(evt.geometry, simbol));
+                    map.infoWindow.setTitle('预报降水查询');
+                    forcastQueryFunc.content =
+                            "<div>" +
+                            "   <p>经度：" + evt.geometry.getLongitude() + "</p>" +
+                            "   <p>纬度：" + evt.geometry.getLatitude() + "</p>" +
+                            "   <p><label id='forcast-query-label'>正在查询，请稍后...</label></p>" +
+                            "   <textarea cols='50' rows='30' wrap='off' id='forcast-query-textarea' style='display:none'>" +
+                            '{"Origins":[{"Origin":"ecmwf","DateStrs":[{"DateStr":"20150802","TimeSpans":[{"TimeStr":"00","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.070907823741436},{"Lon":110.625,"Lat":38.375,"Value":0.070907823741436},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.17726954817771912},{"Lon":110.375,"Lat":38.125,"Value":0.0},{"Lon":110.625,"Lat":38.125,"Value":0.01181797031313181},{"Lon":110.875,"Lat":38.125,"Value":0.0},{"Lon":111.125,"Lat":38.125,"Value":0.01181797031313181},{"Lon":111.375,"Lat":38.125,"Value":0.08272579312324524}]},{"TimeStr":"06","Datas":[{"Lon":110.375,"Lat":38.375,"Value":12.432504653930664},{"Lon":110.625,"Lat":38.375,"Value":14.760644912719727},{"Lon":110.875,"Lat":38.375,"Value":19.806917190551758},{"Lon":111.125,"Lat":38.375,"Value":16.533340454101562},{"Lon":111.375,"Lat":38.375,"Value":15.942441940307617},{"Lon":110.375,"Lat":38.125,"Value":12.160691261291504},{"Lon":110.625,"Lat":38.125,"Value":15.670628547668457},{"Lon":110.875,"Lat":38.125,"Value":23.139585494995117},{"Lon":111.125,"Lat":38.125,"Value":19.866008758544922},{"Lon":111.375,"Lat":38.125,"Value":17.419687271118164}]},{"TimeStr":"12","Datas":[{"Lon":110.375,"Lat":38.375,"Value":4.9517292976379395},{"Lon":110.625,"Lat":38.375,"Value":6.3698859214782715},{"Lon":110.875,"Lat":38.375,"Value":7.338959693908691},{"Lon":111.125,"Lat":38.375,"Value":6.251706123352051},{"Lon":111.375,"Lat":38.375,"Value":8.816205978393555},{"Lon":110.375,"Lat":38.125,"Value":10.009820938110352},{"Lon":110.625,"Lat":38.125,"Value":15.824261665344238},{"Lon":110.875,"Lat":38.125,"Value":21.01235008239746},{"Lon":111.125,"Lat":38.125,"Value":19.73600959777832},{"Lon":111.375,"Lat":38.125,"Value":17.384233474731445}]},{"TimeStr":"18","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.01181797031313181},{"Lon":110.625,"Lat":38.375,"Value":0.05908985063433647},{"Lon":110.875,"Lat":38.375,"Value":0.16545158624649048},{"Lon":111.125,"Lat":38.375,"Value":1.6545158624649048},{"Lon":111.375,"Lat":38.375,"Value":6.712606906890869},{"Lon":110.375,"Lat":38.125,"Value":0.04727188125252724},{"Lon":110.625,"Lat":38.125,"Value":0.6263524293899536},{"Lon":110.875,"Lat":38.125,"Value":1.9026931524276733},{"Lon":111.125,"Lat":38.125,"Value":5.152635097503662},{"Lon":111.375,"Lat":38.125,"Value":11.097073554992676}]}]},{"DateStr":"20150803","TimeSpans":[{"TimeStr":"00","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.0},{"Lon":110.625,"Lat":38.375,"Value":0.0},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.02363594062626362},{"Lon":110.375,"Lat":38.125,"Value":0.02363594062626362},{"Lon":110.625,"Lat":38.125,"Value":0.01181797031313181},{"Lon":110.875,"Lat":38.125,"Value":0.01181797031313181},{"Lon":111.125,"Lat":38.125,"Value":0.04727188125252724},{"Lon":111.375,"Lat":38.125,"Value":0.10636173188686371}]},{"TimeStr":"06","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.0},{"Lon":110.625,"Lat":38.375,"Value":0.0},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.0},{"Lon":110.375,"Lat":38.125,"Value":0.0},{"Lon":110.625,"Lat":38.125,"Value":0.0},{"Lon":110.875,"Lat":38.125,"Value":0.0},{"Lon":111.125,"Lat":38.125,"Value":0.0},{"Lon":111.375,"Lat":38.125,"Value":0.0}]},{"TimeStr":"12","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.0},{"Lon":110.625,"Lat":38.375,"Value":0.0},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.0},{"Lon":110.375,"Lat":38.125,"Value":0.0},{"Lon":110.625,"Lat":38.125,"Value":0.0},{"Lon":110.875,"Lat":38.125,"Value":0.0},{"Lon":111.125,"Lat":38.125,"Value":0.0},{"Lon":111.375,"Lat":38.125,"Value":0.0}]},{"TimeStr":"18","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.0},{"Lon":110.625,"Lat":38.375,"Value":0.0},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.0},{"Lon":110.375,"Lat":38.125,"Value":0.0},{"Lon":110.625,"Lat":38.125,"Value":0.0},{"Lon":110.875,"Lat":38.125,"Value":0.0},{"Lon":111.125,"Lat":38.125,"Value":0.0},{"Lon":111.375,"Lat":38.125,"Value":0.0}]}]}]}]}' +
+                            "   </textarea>" +
+                            "   <p><a href='dataquery.html' target='_blank'>高级</a></p>" +
+                            "</div>";
+                    map.infoWindow.setContent(forcastQueryFunc.content);
+                    map.infoWindow.show(map.toScreen(evt.geometry));
+                    on(map.infoWindow, 'hide', function () {
+                        functionController.stop(forcastQueryFunc);
+                    });
+                    forcastQueryFunc.draw.deactivate();
+                    map.enableMapNavigation();
+                    $('#forcast-query-label').delay(1500).hide(0);
+                    $('#forcast-query-textarea').delay(1600).show(500);
+                });
+            };
+            forcastQueryFunc.stop = function () {
+                this.draw.deactivate();
+                map.enableMapNavigation();
+                map.graphics.clear();
+                map.infoWindow.hide();
+            };
+
+        });
+    </script>
+</head>
+
+<body>
+<nav class="white">
+    <div class="nav-wrapper">
+        <ul class="left">
+            <li><a id="low-logo" class="dropdown-button black-text" href='#' data-activates="main-list"
+                   data-constrainwidth="false" data-hover="true" data-beloworigin="true">水联网通用平台<i
+                    class="material-icons left">apps</i></a></li>
+        </ul>
+        <ul class="right">
+            <li class="tooltipped" data-position="bottom" data-delay="0" data-tooltip="缩放至主视图"><a href="#"><i
+                    class="material-icons black-text">home</i></a></li>
+            <li class="tooltipped" data-position="bottom" data-delay="0" data-tooltip="图层列表" id="layer-list-btn"><a
+                    href="#"><i
+                    class="material-icons black-text">clear_all</i></a></li>
+            <li class="tooltipped dropdown-button" data-activates='basemap-chooser' data-beloworigin="true"
+                data-constrainwidth="false" data-position="bottom" data-delay="0" data-tooltip="选择底图"><a href="#"><i
+                    class="material-icons black-text">perm_media</i></a></li>
+            <li id="search-form">
+                <form>
+                    <div class="input-field">
+                        <input id="search" type="search" placeholder="查询地点、经纬度" required>
+                        <label for="search"><i class="material-icons black-text">search</i></label>
+                        <i class="material-icons">close</i>
+                    </div>
+                </form>
+            </li>
+        </ul>
+    </div>
+</nav>
+<div id="basemap-chooser" class="dropdown-content" style="width:360px; overflow:auto;">
+    <div id="basemap-gallery"></div>
+</div>
+<!-- main-list: 鼠标放在logo上后显示的下拉列表 -->
+<div id="main-list" class='dropdown-content'>
+    <div class="row container">
+        <ul class="col s3 low-tabs">
+            <li class="tab active" id="basic-tab"><a>基本图层</a></li>
+            <li class="tab" id="slh-tab"><a>疏勒河灌区示范工程</a></li>
+        </ul>
+        <div class="col s9 black-text">
+            <!-- 基本图层  -->
+            <div id="basic-content" class="low-tabcontent">
+                <!-- 数字河网  -->
+                <div class="row hoverable" id="river-row">
+                    <div class="col s6 m4 layer">
+                        <span>数字河网</span>
+                            <span class="switch"><label><input type="checkbox"><span
+                                    class="lever"></span></label>
+                            </span>
+                    </div>
+                    <div class="col s6 m8 function">
+                        <a class="waves-effect waves-light btn">数据说明</a>
+                        <a class="waves-effect waves-light btn">河段查询</a>
+                    </div>
+                </div>
+                <!-- DEM  -->
+                <div class="row hoverable" id="dem-row">
+                    <div class="col s6 m4 layer">
+                        <span>数字高程</span>
+                            <span class="switch"><label><input type="checkbox" checked><span
+                                    class="lever"></span></label>
+                            </span>
+                    </div>
+                    <div class="col s6 m8 function">
+                        <a class="waves-effect waves-light btn">数据说明</a>
+                        <a class="waves-effect waves-light btn" id="query-dem-btn">高程查询</a>
+                        <a class="waves-effect waves-light btn" id="ele-profile-btn">高程纵断面</a>
+                    </div>
+                </div>
+                <!-- 卫星降水  -->
+                <div class="row hoverable" id="cmorph-row">
+                    <div class="col s6 m4 layer">
+                        <span>卫星降水</span>
+                            <span class="switch"><label><input type="checkbox"><span class="lever"></span></label>
+                            </span>
+                    </div>
+                    <div class="col s6 m8 function">
+                        <a class="waves-effect waves-light btn">数据说明</a>
+                        <a class="waves-effect waves-light btn">降水查询</a>
+                        <a class="waves-effect waves-light btn">降水统计</a>
+                    </div>
+                </div>
+                <!-- 天气预报  -->
+                <div class="row hoverable" id="forcast-row">
+                    <div class="col s6 m4 layer">
+                        <span>气象预报</span>
+                            <span class="switch"><label><input type="checkbox"><span class="lever"></span></label>
+                            </span>
+                    </div>
+                    <div class="col s6 m8 function">
+                        <a class="waves-effect waves-light btn">数据说明</a>
+                        <a class="waves-effect waves-light btn" id="forcast-play-btn">气象播放</a>
+                        <a class="waves-effect waves-light btn" id="forcast-query-btn">预报降水查询</a>
+                    </div>
+                </div>
+            </div>
+            <!-- 疏勒河专题图层  -->
+            <div id="slh-content" class="low-tabcontent">
+                <div class="row hoverable" id="qudao-row">
+                    <div class="col s6 m4 layer">
+                        <span>渠道和田块</span>
+                            <span class="switch"><label><input type="checkbox"><span class="lever"></span></label>
+                            </span>
+                    </div>
+                    <div class="col s6 m8 function">
+                        <a class="waves-effect waves-light btn">缩放至</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="mapDiv">
+    <!-- layerlist -->
+    <div id="layer-list" class="card hide">
+        <div class="card-content">
+            <span class="card-title black-text">图层列表</span>
+
+            <div id="layer-list-content"></div>
+        </div>
+        <div class="card-action">
+            <a href="#">关闭</a>
+        </div>
+    </div>
+    <div id="ele-profile-info" class="card hide" style="overflow: visible">
+        <div class="card-content">
+            <span class="card-title black-text">绘制高程纵断面</span>
+            <br>
+            <label>路径方式：</label>
+            <br>
+            <a class="waves-effect waves-light btn" id="Polyline">多段线</a>
+            <a class="waves-effect waves-light btn" id="FreehandPolyline">手绘线</a>
+            <br>
+            <label>单位：</label>
+                <span class="input-field">
+                    <select id="unitsSelect">
+                        <option value="esriKilometers">千米</option>
+                        <option value="esriMiles">英里</option>
+                        <option value="esriMeters">米</option>
+                        <option value="esriNauticalMiles">海里</option>
+                    </select>
+                </span>
+        </div>
+        <div class="card-action">
+            <a href="#" class="disabled">暂停绘制</a>
+            <a href="#">关闭</a>
+        </div>
+    </div>
+
+    <div id="time-slider-card" class="claro card hide">
+        <div class="card-content" style="text-align: center">
+            <p>数据发布机构：欧洲(ECMWF)</p>
+
+            <div id="time-slider"></div>
+        </div>
+    </div>
+</div>
+<div id="ele-profile-chart" class="hide"></div>
+
+</body>
+
+</html>

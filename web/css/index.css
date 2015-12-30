@@ -1,0 +1,133 @@
+.container {
+    max-width: 100%;
+}
+
+#mapDiv {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    margin: 0;
+    padding: 0;
+}
+
+#main-list {
+    width: 100%;
+    left: 0;
+}
+
+#search-form:hover {
+    background: none;
+}
+
+.low-tabs .tab {
+    border-left: 4px solid #ffffff;
+    white-space: normal;
+}
+
+.low-tabs .tab:hover {
+    border-left: 4px solid #8bc6b9;
+}
+
+.low-tabs .tab.active {
+    border-left: 4px solid #26a69a;
+}
+
+.low-tabs .tab.disabled {
+    cursor: default;
+    border-left: 4px solid #ffffff;
+}
+
+.low-tabs .tab.disabled a {
+    color: #8bc6b9;
+}
+
+.low-tabs .tab.disabled:hover {
+    background: none;
+}
+.low-tabcontent .row {
+    margin-bottom: 0;
+}
+.low-tabcontent .row .layer {
+    font-size: larger;
+    text-align: right;
+}
+
+.low-tabcontent .row .layer span {
+}
+
+.low-tabcontent .row .function {
+    padding: 15px 0 0 30px;
+    border-left: 1px solid #8bc6b9;
+}
+
+.low-tabcontent .row .function a {
+    float: left;
+    margin: 0 10px 10px 0;
+}
+
+.esriBasemapGalleryLabelContainer {
+    color: black;
+    white-space: normal;
+    line-height: normal;
+}
+
+.esriBasemapGalleryNode a {
+    height: 67px;
+    padding: 0;
+}
+
+.esriBasemapGalleryNode {
+    text-align: center;
+}
+
+#mapDiv .card {
+    float: right;
+    margin: 15px 15px 0 0;
+    clear: left;
+    z-index: 10;
+    max-height: 100%;
+    overflow: auto;
+}
+
+#mapDiv .card .card-title {
+    font-size: larger;
+}
+
+#mapDiv .card .card-action a.disabled {
+    color: #c8c8c8;
+    cursor: default;
+}
+
+#mapDiv .card .card-action a.disabled:hover {
+
+}
+
+#mapDiv_root {
+    position: static;
+    overflow: visible;
+}
+
+#ele-profile-chart {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    height: 20%;
+    width: 100%;
+    z-index: -1;
+    background: #666;
+}
+
+#ele-profile-info a.btn{
+    padding: 0 8px 0 8px;
+}
+
+#time-slider-card {
+    position: absolute;
+    right: 2em;
+    left: 2em;
+    bottom: 2em;
+}

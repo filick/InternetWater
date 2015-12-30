@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>水联网数据服务</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no, width=device-width"/>
+    <title>水联网数据服务</title>
+
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/dataquery.css">
+    <script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="js/materialize.js"></script>
+
+    <link href="js/jsoneditor/dist/jsoneditor.min.css" rel="stylesheet" type="text/css">
+    <script src="js/jsoneditor/dist/jsoneditor.min.js"></script>
+    <script>
+        $(function () {
+            $('select').material_select();
+            $('.datepicker').pickadate({
+                selectMonths: true, // Creates a dropdown to control month
+                selectYears: false // Creates a dropdown of 15 years to control year
+            });
+            $("input:radio[name='group_publishdate']").change(function(){
+                var $selectedvalue = $("input[name='group_publishdate']:checked").val();
+                if ($selectedvalue === 'history') {
+                    $('#radio_publishdate').removeClass('hide');
+                } else {
+                    $('#radio_publishdate').addClass('hide');
+                }
+            });
+            $("input:radio[name='group_range']").change(function(){
+                var $selectedvalue = $("input[name='group_range']:checked").val();
+                if ($selectedvalue === 'point') {
+                    $('#radio_point').removeClass('hide');
+                    $('#radio_rectangle').addClass('hide');
+                } else {
+                    $('#radio_point').addClass('hide');
+                    $('#radio_rectangle').removeClass('hide');
+                };
+            });
+            var editor = new JSONEditor(document.getElementById("jsoneditor"));
+            editor.set(json);
+        });
+    </script>
+</head>
+<body>
+<nav class="white">
+    <div class="nav-wrapper">
+        <ul class="left">
+            <li><a id="low-logo" class="black-text">水联网数据服务<i class="material-icons left">cloud_queue</i></a></li>
+        </ul>
+        <ul class="right">
+            <li><a href="index.html" class="black-text"><i class="material-icons black-text left">arrow_back</i>返回</a></li>
+            <li><a href="javascript:window.opener=null;window.open('','_self');window.close();" class="black-text"><i class="material-icons black-text left">close</i>关闭</a></li>
+        </ul>
+    </div>
+</nav>
+<div class="container">
+    <div class="row">
+        <form class="col s12" onsubmit="return false">
+            <div class="section">
+                <h5>数据源</h5>
+                <div class="row">
+                    <div class="input-field col s12 m8 l4">
+                        <select>
+                            <option value="tigge" selected>TIGGE数值天气预报</option>
+                        </select>
+                        <label>选择需要检索和查询的数据源</label>
+                    </div>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="section">
+                <b>选择预报机构</b><br>
+                <label>TIGGE集合了全球10个气象预报中心的数值预报结果,选择其中一个</label>
+
+                <p>
+                    <input name="group_origin" type="radio" id="ecmwf" checked/>
+                    <label for="ecmwf" class="black-text">欧洲(ecmwf)</label>
+                    <input name="group_origin" type="radio" id="cma"/>
+                    <label for="cma" class="black-text">中国(cma)</label>
+                    <input name="group_origin" type="radio" id="ukmo"/>
+                    <label for="ukmo" class="black-text">英国(cma)</label>
+                </p>
+            </div>
+            <div class="divider"></div>
+            <div class="section">
+                <b>选择数据日期</b><br>
+                <label>说明：......</label>
+
+                <p>
+                    <input name="group_publishdate" type="radio" id="latest" value="latest" checked/>
+                    <label for="latest" class="black-text">最新预报(2015年12月6日)</label>
+                </p>
+
+                <p>
+                    <input name="group_publishdate" type="radio" id="history" value="history"/>
+                    <label for="history" class="black-text">历史预报</label>
+                </p>
+                <div class="row hide" id="radio_publishdate">
+                    <div class="col s2 offset-s1">
+                        <p>选择日期：</p>
+                    </div>
+                    <div class="col s8">
+                    <input type="date" class="datepicker" value="6 December, 2015">
+                        </div>
+                </div>
+
+            </div>
+            <div class="divider"></div>
+            <div class="section">
+                <b>查询范围</b><br>
+
+                <p>
+                    <input name="group_range" type="radio" id="point" value="point" checked/>
+                    <label for="point" class="black-text">点</label>
+                </p>
+                <div class="row" id="radio_point">
+                    <div class="input-field col s5 offset-s1">
+                        <input id="latitude" type="text" class="validate">
+                        <label for="latitude">经度</label>
+                    </div>
+                    <div class="input-field col s5">
+                        <input id="longitude" type="text" class="validate">
+                        <label for="longitude">纬度</label>
+                    </div>
+                </div>
+                <p>
+                    <input name="group_range" type="radio" id="rectangle" value="rectangle" />
+                    <label for="rectangle" class="black-text">矩形区域</label>
+                </p>
+
+                <div class="row hide" id="radio_rectangle">
+                    <div class="input-field col s5 offset-s1">
+                        <input id="min_latitude" type="text" class="validate">
+                        <label for="min_latitude">最小经度</label>
+                    </div>
+
+                    <div class="input-field col s5">
+                        <input id="max_latitude" type="text" class="validate">
+                        <label for="max_latitude">最大经度</label>
+                    </div>
+                    <div class="input-field col s5 offset-s1">
+                        <input id="min_longitude" type="text" class="validate">
+                        <label for="min_longitude">最小纬度</label>
+                    </div>
+                    <div class="input-field col s5">
+                        <input id="max_longitude" type="text" class="validate">
+                        <label for="max_longitude">最大纬度</label>
+                    </div>
+                </div>
+
+            </div>
+            <div class="divider"></div>
+            <div class="section">
+                <button class="btn waves-effect waves-light" onclick="$('#result').removeClass('hide')">提交请求
+                    <i class="material-icons right">send</i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="row hide" id="result">
+        <div class="col s12">
+            <h5>返回结果：</h5>
+            <div id="jsoneditor" style="width: 100%; height: 600px;"></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no, width=device-width"/>
+    <title>水联网 Internet of Water</title>
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
+    -->
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.3/css/materialize.min.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.15/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.15/esri/css/esri.css">
+
+    <!--  CDN 3.12
+    <link rel="stylesheet" href="http://jsapi.thinkgis.cn/esri/css/esri.css">
+    -->
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="js/materialize.js"></script>
+    <script>
+        var dojoConfig = {
+            parseOnLoad: true,
+            packages: [{
+                name: 'iow',
+                location: '/js/IoW'
+            }]
+        };
+    </script>
+    <script src="https://js.arcgis.com/3.15/"></script>
+
+
+    <script>
+        require([
+            'iow/View',
+            'iow/App',
+            'iow/Data',
+            'esri/map',
+            'dojo/domReady!'
+        ], function (View,
+                     App,
+                     Map) {
+
+            var digitalRiver = new Data('数字河网');
+            digitalRiver.setState({
+                count: 3,
+                totalSize: '236.12GB',
+                header: ['名称', '发布机构', '分辨率', '存储方案', '数据大小', '连接状态'],
+                list: [
+                    ['清华Hydro30', '清华大学', '30m', 'Oracle数据库', '206GB', '通过ArcSDE连接成功'],
+                    ['HydroSHEDS', '' ]
+                ]
+            });
+
+            var page = new View();
+
+            page.init = function () {
+                $("#mapDiv").css("top", $("nav").css("height"));
+                page.map = new Map("mapDiv", {
+                    basemap: "topo",
+                    center: [90, 30],
+                    zoom: 3,
+                    logo: false
+                });
+            };
+
+            var app = new App(page);
+        });
+    </script>
+</head>
+<body>
+<nav class="white">
+    <div class="nav-wrapper">
+        <ul class="left">
+            <li><a id="low-logo" class="dropdown-button black-text" href='#' data-activates="page-list"
+                   data-hover="true" data-beloworigin="true">水联网地理数据展示平台<i
+                    class="material-icons left">apps</i></a></li>
+        </ul>
+        <ul class="right">
+            <li><a href="#" class="black-text">数据列表<i class="material-icons left">list</i></a></li>
+            <li><a href="#" class="black-text">时间轴<i class="material-icons left">av_timer</i></a></li>
+            <li class="tooltipped dropdown-button" data-activates='basemap-chooser' data-beloworigin="true"
+                data-constrainwidth="false" data-position="bottom" data-delay="0" data-tooltip="选择底图"><a href="#"><i
+                    class="material-icons black-text">perm_media</i></a></li>
+            <li id="search-form">
+                <form>
+                    <div class="input-field">
+                        <input id="search" type="search" placeholder="查询地点、经纬度" required>
+                        <label for="search"><i class="material-icons black-text">search</i></label>
+                        <i class="material-icons">close</i>
+                    </div>
+                </form>
+            </li>
+        </ul>
+    </div>
+</nav>
+<!-- page-list: 鼠标放在logo上后显示的下拉列表 -->
+<div id="page-list" class="dropdown-content">
+    <li><a href="monitor.jsp">水联网数据采集监控平台<i class="material-icons left">assessment</i></a></li>
+    <li><a href="dataquery.html">水联网数据查询SOA服务<i class="material-icons left">cloud_queue</i></a></li>
+</div>
+<div id="basemap-chooser" class="dropdown-content" style="width:360px; overflow:auto;">
+    <div id="basemap-gallery"></div>
+</div>
+
+<div id="mapDiv"></div>
+<div id="ele-profile-chart" class="hide"></div>
+</body>
+</html>
