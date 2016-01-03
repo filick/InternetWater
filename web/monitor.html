@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no, width=device-width"/>
+    <title>水联网地理数据云服务平台 Internet of Water</title>
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
+    -->
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.3/css/materialize.min.css">
+
+    <!--  CDN 3.12
+    <link rel="stylesheet" hre="http://jsapi.thinkgis.cn/esri/css/esri.css">
+    -->
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="js/materialize.js"></script>
+    <script type="text/javascript" src="js/main.js"></script>
+
+    <script>
+        $(function(){
+            initNav('monitor');
+        });
+
+        // TIGGE
+        var url = "/TiggeMonitor";
+        var pageIndex = 1;
+        var maxRecordNum = 10;
+        var recordNum = 0;
+        var pageNum = 100;
+
+        function updateInfo() {
+            $.get(url, {
+                action: "info"
+            }).done(function(data) {
+                var info;
+                eval('info = ' + data);
+                recordNum = info.count;
+                pageNum = Math.ceil(recordNum / maxRecordNum);
+                $("#count").html(info.count);
+                $("#totalsize").html(info.totalsize);
+                for (var i in info.header) {
+                    $("#header").append("<th>" + info.header[i] + "</th>");
+                }
+            }).fail(function() {
+                $("#count").html("查询失败");
+                $("#totalsize").html("查询失败");
+            });
+        }
+
+        function updateList() {
+            $.get(url, {
+                action: "list",
+                begin: (pageIndex - 1) * maxRecordNum + 1,
+                num: maxRecordNum
+            }).done(function(data) {
+                var list = eval(data);
+                $("#list").children().remove();
+                $("#pageindex").children().remove();
+                for (var i in list) {
+                    var record = list[i];
+                    var html = "<tr>";
+                    for (var j in record) {
+                        html += "<td>" + record[j] + "</td>";
+                    }
+                    html += "</tr>";
+                    $("#list").append(html);
+                }
+                var left = $('<li><a href="javascript:void(0);"><i class="material-icons">chevron_left</i></a></li>');
+                if (pageIndex == 1) {
+                    left.addClass("disabled");
+                } else {
+                    left.click(function() {
+                        pageIndex--;
+                        updateList();
+                    });
+                }
+                $("#pageindex").append(left);
+                if (pageIndex > 3) {
+                    $("#pageindex").append('<li>...</li>');
+                }
+                for (var index = -2; index <= 2; index++) {
+                    var i = pageIndex + index;
+                    if (i >= 1 && i <= pageNum) {
+                        var l;
+                        if (index != 0) {
+                            l = $('<li class="waves-effect"><a href="javascript:void(0);" onclick="pageIndex+=' + index + ';updateList();">' + i + '</a></li>');
+                        } else {
+                            l = $('<li class="active"><a href="javascript:void(0);">' + i + '</a></li>');
+                        }
+                        $("#pageindex").append(l);
+                    }
+                }
+                if (pageIndex < pageNum - 2) {
+                    $("#pageindex").append('<li>...</li>');
+                }
+                var right = $('<li><a href="javascript:void(0);"><i class="material-icons">chevron_right</i></a></li>');
+                if (pageIndex == pageNum) {
+                    right.addClass("disabled");
+                } else {
+                    right.click(function() {
+                        pageIndex++;
+                        updateList();
+                    })
+                }
+                $("#pageindex").append(right);
+            });
+        }
+
+        $(function() {
+            updateInfo();
+            updateList();
+        });
+    </script>
+
+</head>
+<body>
+<nav class="white">
+    <div class="nav-wrapper">
+        <ul class="left">
+            <li><a id="low-logo" class="dropdown-button black-text" href='#' data-activates="page-list"
+                   data-hover="true" data-beloworigin="true"><span id="title_active"></span><i
+                    class="material-icons left" id="icon_active"></i></a></li>
+        </ul>
+    </div>
+</nav>
+<!-- page-list: 鼠标放在logo上后显示的下拉列表 -->
+<div id="page-list" class="dropdown-content">
+    <li><a id="url_link1"><span id="title_link1"></span><i class="material-icons left" id="icon_link1"></i></a></li>
+    <li><a id="url_link2"><span id="title_link2"></span><i class="material-icons left" id="icon_link2"></i></a></li>
+</div>
+
+<div class="container">
+    <div class="section">
+        <h5 class="teal-text">数字河网</h5>
+        <p>数据集:3 &nbsp;&nbsp;&nbsp;&nbsp;数据总量:208 Gb</p>
+        <table class="highlight centered">
+            <thead>
+            <tr>
+                <th>数据集</th>
+                <th>发布机构</th>
+                <th>水平分辨率</th>
+                <th>存储方案</th>
+                <th>数据大小</th>
+                <th>连接状态</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr>
+                <td>清华Hydro30</td>
+                <td>清华大学</td>
+                <td>30米</td>
+                <td>Oracle Geodatabase</td>
+                <td>206 Gb</td>
+                <td>已通过ArcSDE连接</td>
+            </tr>
+            <tr>
+                <td>HydroSHEDS</td>
+                <td>美国地质勘探局(USGS)</td>
+                <td>290米</td>
+                <td>Shp File</td>
+                <td>1.71 Gb</td>
+                <td>已连接</td>
+            </tr>
+            <tr>
+                <td>Hydro1K</td>
+                <td>清华大学</td>
+                <td>1000米</td>
+                <td>Shp File</td>
+                <td>253 Mb</td>
+                <td>已连接</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="divider"></div>
+    <div class="section">
+        <h5 class="teal-text">全球数字高程</h5>
+        <p>数据集:1 &nbsp;&nbsp;&nbsp;&nbsp;数据总量:1.14 Tb</p>
+        <table class="highlight centered">
+            <thead>
+            <tr>
+                <th>数据集</th>
+                <th>发布机构</th>
+                <th>水平分辨率</th>
+                <th>存储方案</th>
+                <th>数据大小</th>
+                <th>连接状态</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr>
+                <td>ASTER GDEM V2</td>
+                <td>Japan Space Systems</td>
+                <td>30米</td>
+                <td>ArcGIS Mosaic Dataset</td>
+                <td>1.14 Tb</td>
+                <td>已通过ArcSDE连接</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="divider"></div>
+    <div class="section">
+        <h5 class="teal-text">TIGGE气象预报</h5>
+        <p>下载任务数:<span id="count">正在查询</span> &nbsp;&nbsp;&nbsp;&nbsp;数据总量:<span id="totalsize">正在查询</span></p>
+        <table class="highlight centered">
+            <thead>
+                <tr id="header">
+                    <!--  insert header here -->
+                </tr>
+            </thead>
+            <tbody id="list">
+                    <!--  insert record here -->
+            </tbody>
+        </table>
+        <ul class="pagination" id="pageindex" style="text-align: center">
+            <!-- insert page index here -->
+        </ul>
+    </div>
+    <div class="divider"></div>
+    <div class="section">
+        <h5 class="teal-text">CMorph降水</h5>
+        <p>数据集:3 &nbsp;&nbsp;&nbsp;&nbsp;原始数据总量:103 Gb &nbsp;&nbsp;&nbsp;&nbsp;解析数据总量:7.87 Tb</p>
+        <table class="highlight centered">
+            <thead>
+            <tr>
+                <th>数据集</th>
+                <th>空间分辨率</th>
+                <th>时间分辨率</th>
+                <th>原始数据大小</th>
+                <th>解析数据大小</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr>
+                <td>CMorph_8km_30min</td>
+                <td>8000米</td>
+                <td>30分钟</td>
+                <td>92.1 Gb</td>
+                <td>7.74 Tb</td>
+            </tr>
+            <tr>
+                <td>CMorph_025deg_3hr</td>
+                <td>0.25度</td>
+                <td>3小时</td>
+                <td>8.9 Gb</td>
+                <td>120 Gb</td>
+            </tr>
+            <tr>
+                <td>CMorph_025deg_daily</td>
+                <td>0.25度</td>
+                <td>天</td>
+                <td>2.8 Gb</td>
+                <td>14.5 Gb</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

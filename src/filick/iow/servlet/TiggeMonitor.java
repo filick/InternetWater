@@ -19,8 +19,8 @@ public class TiggeMonitor extends HttpServlet {
     private String table = "GLOBALTIGGERECORD";
     private String user = "download";
     private String password = "download";
-    //private String[] header = new String[]{"任务标识", "下载完成时间", "数据发布时间", "发布机构", "数据解析状态", "原数据大小"};
-    private String headerStr = "[\"任务标识\", \"下载完成时间\", \"数据发布时间\", \"发布机构\", \"数据解析状态\", \"原数据大小\"]";
+    //private String[] header = new String[]{"任务标识", "下载完成时间", "数据发布时间", "发布机构", "数据解析状态", "原始数据大小"};
+    private String headerStr = "[\"任务标识\", \"下载完成时间\", \"数据发布时间\", \"发布机构\", \"数据解析状态\", \"原始数据大小\"]";
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
@@ -47,7 +47,7 @@ public class TiggeMonitor extends HttpServlet {
                 int count = rs.getInt(1);
                 String size = count * 120 / 1024 + " Gb";
                 response.setStatus(200);
-                out.print("{count: " + count + ", totalsize: '" + size + "', header:" + headerStr + " }");
+                out.print("{count:" + count + ", totalsize:\"" + size + "\", header:" + headerStr + " }");
                 conn.close();
                 stmt.close();
                 rs.close();
@@ -61,25 +61,23 @@ public class TiggeMonitor extends HttpServlet {
                 int num = Integer.parseInt(request.getParameter("num"));
                 Class.forName("oracle.jdbc.OracleDriver");
                 conn = DriverManager.getConnection(database, user, password);
-                String sql = "(select * from " + table + " where rownum < " + (begin + num) + ") minus (select * from " + table + " where rownum < " + begin + ")";
+                String sql = "(select * from (select * from " + table + " order by downtime desc) where rownum < " + (begin + num) + ") minus (SELECT * FROM ( select * from " + table + " order by downtime desc ) where rownum < " + begin + ")";
                 stmt = conn.prepareStatement(sql);
                 rs = stmt.executeQuery();
                 out.print("[");
-                while(rs.next()){
+                while (rs.next()) {
                     out.print("[");
-                    String id = rs.getString(1);
-                    out.print("'" + id + "',");
-                    Time dowloadtime = rs.getTime(2);
-                    out.print("'" + new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(dowloadtime) + "',");
-                    Time publishdate = rs.getTime(3);
-                    out.print("'" + new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(publishdate) + "',");
-                    String source = rs.getString(4).replace(" ", "");
-                    out.print("'" + source + "',");
-                    int state = Integer.parseInt(rs.getString(6));
-                    out.print("'" + (state == 0 ? "未解析":"已解析") + "',");
-                    String size = "120Mb";
-                    out.print("'" + size + "'],");
-                }
+                String id = rs.getString(1);
+                out.print("'" + id + "',");
+                out.print("'" + rs.getDate(2) + " " + rs.getTime(2) + "',");
+                out.print("'" + rs.getDate(3) + "',");
+                String source = rs.getString(4).replace(" ", "");
+                out.print("'" + source + "',");
+                int state = Integer.parseInt(rs.getString(6));
+                out.print("'" + (state == 0 ? "未解析" : "已解析") + "',");
+                String size = "120Mb";
+                out.print("'" + size + "'],");
+            }
                 out.print("]");
                 conn.close();
                 stmt.close();

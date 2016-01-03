@@ -3,12 +3,21 @@ html {
     font-family: Monospaced, 'Microsoft YaHei', 'Apple LiGothic Medium';
 }
 
-#low-logo {
+#low-logo, #page-list li a {
+    color: gray;
     padding-left: 20px;
     font-size: 30px;
     font-family: Monospaced, 'SimHei', 'Apple LiGothic Medium';
 }
 
+#low-logo {
+    padding-right: 20px;
+}
+
 nav {
     padding: 0;
+}
+
+tr td{
+    padding: 5px 5px;
 }

@@ -4,7 +4,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no, width=device-width"/>
-    <title>水联网 Internet of Water</title>
+    <title>水联网地理数据云服务平台 Internet of Water</title>
     <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!--
     <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
@@ -32,8 +32,11 @@
             async: true
         };
     </script>
+    <script type="text/javascript" src="js/main.js"></script>
     <script>
         $(function () {
+            initNav("index");
+
             $("#mapDiv").css("top", $("nav").css("height"));
             $('select').material_select();
             //$("#mapDiv .card").css("max-height", $("#mapDiv").css("height"));
@@ -156,6 +159,7 @@
             "dojo/on",
             "esri/TimeExtent",
             "esri/dijit/TimeSlider",
+            "esri/dijit/Search",
             "dojo/_base/array",
             "dojo/dom",
             "dojo/domReady!"
@@ -177,6 +181,7 @@
                      on,
                      TimeExtent,
                      TimeSlider,
+                     Search,
                      arrayUtils,
                      dom) {
 
@@ -196,6 +201,27 @@
                 map: map,
                 attachTo: "bottom-left",
                 scalebarUnit: "metric"
+            });
+
+            var s = new Search({
+                enableLabel: false,
+                enableInfoWindow: false,
+                map: map
+            }, "");
+
+            s.startup();
+
+            $("#search-form").submit(function (e) {
+                var content = $("#search").val();
+                console.info(content);
+                try {
+                    if (content) {
+                        s.search(content);
+                    }
+                } catch (e) {
+                    console.info(e);
+                }
+                return false;
             });
             /*
              var geocoder = new Geocoder({
@@ -227,130 +253,132 @@
             var forcastLayer = new LLayer("forcast", "气象预报", basicGroup, "http://101.6.54.28:6080/arcgis/rest/services/Precipitation/forcast_sample/MapServer", false).init(2);
             var queryDemFunc = new FFunction("query-dem", "高程查询", demLayer);
             queryDemFunc.start = function () {
-                alert("start!");
+                //alert("start!");
             };
 
             //-----------------------------------------------------------------------------------
             //------------------                疏勒河渠道和田块              --------------------
             //-----------------------------------------------------------------------------------
-            var demLayer = new LLayer("qudao", "渠道和田块", slhGroup, "http://101.6.54.28:6080/arcgis/rest/services/SLH/疏勒河渠和田块/MapServer/", false).init(3);
-            $("#slh-content .function a").click(function () {
-                map.centerAndZoom([97.04, 40.27], 11);
-            });
+            /*
+             var demLayer = new LLayer("qudao", "渠道和田块", slhGroup, "http://101.6.54.28:6080/arcgis/rest/services/SLH/疏勒河渠和田块/MapServer/", false).init(3);
+             $("#slh-content .function a").click(function () {
+             map.centerAndZoom([97.04, 40.27], 11);
+             });*/
             //-----------------------------------------------------------------------------------
             //------------------                 绘制高程纵断线                --------------------
             //-----------------------------------------------------------------------------------
-            var tb, epWidget, lineSymbol;
+            /*
+             var tb, epWidget, lineSymbol;
 
-            function initToolbar(toolName) {
-                epWidget.clearProfile(); //Clear profile
-                map.graphics.clear();
-                tb = new Draw(map);
-                tb.on("draw-end", addGraphic);
-                tb.activate(toolName);
-                map.disableMapNavigation();
-            }
+             function initToolbar(toolName) {
+             epWidget.clearProfile(); //Clear profile
+             map.graphics.clear();
+             tb = new Draw(map);
+             tb.on("draw-end", addGraphic);
+             tb.activate(toolName);
+             map.disableMapNavigation();
+             }
 
-            function addGraphic(evt) {
-                //deactivate the toolbar and clear existing graphics
-                tb.deactivate();
-                map.enableMapNavigation();
-                $("#ele-profile-info .card-action a:first").addClass("disabled");
-                var symbol = lineSymbol;
-                map.graphics.add(new Graphic(evt.geometry, symbol));
-                epWidget.set("profileGeometry", evt.geometry);
-                var sel = dom.byId("unitsSelect");
-                if (sel) {
-                    var val = sel.options[sel.selectedIndex].value;
-                    epWidget.set("measureUnits", val);
-                }
-            }
+             function addGraphic(evt) {
+             //deactivate the toolbar and clear existing graphics
+             tb.deactivate();
+             map.enableMapNavigation();
+             $("#ele-profile-info .card-action a:first").addClass("disabled");
+             var symbol = lineSymbol;
+             map.graphics.add(new Graphic(evt.geometry, symbol));
+             epWidget.set("profileGeometry", evt.geometry);
+             var sel = dom.byId("unitsSelect");
+             if (sel) {
+             var val = sel.options[sel.selectedIndex].value;
+             epWidget.set("measureUnits", val);
+             }
+             }
 
-            $("#unitsSelect").parent().change(function (evt) {
-                if (epWidget) {
-                    epWidget.set("measureUnits", evt.target.options[evt.target.selectedIndex].value);
-                }
-            });
-            lineSymbol = new CartographicLineSymbol(
-                    CartographicLineSymbol.STYLE_SOLID,
-                    new Color([255, 0, 0]), 2,
-                    CartographicLineSymbol.CAP_ROUND,
-                    CartographicLineSymbol.JOIN_MITER, 2
-            );
-            var profileParams = {
-                map: map,
-                profileTaskUrl: "https://elevation.arcgis.com/arcgis/rest/services/Tools/ElevationSync/GPServer",
-                scalebarUnits: Units.MILES
-            };
+             $("#unitsSelect").parent().change(function (evt) {
+             if (epWidget) {
+             epWidget.set("measureUnits", evt.target.options[evt.target.selectedIndex].value);
+             }
+             });
+             lineSymbol = new CartographicLineSymbol(
+             CartographicLineSymbol.STYLE_SOLID,
+             new Color([255, 0, 0]), 2,
+             CartographicLineSymbol.CAP_ROUND,
+             CartographicLineSymbol.JOIN_MITER, 2
+             );
+             var profileParams = {
+             map: map,
+             profileTaskUrl: "https://elevation.arcgis.com/arcgis/rest/services/Tools/ElevationSync/GPServer",
+             scalebarUnits: Units.MILES
+             };
 
-            var epFunction = new FFunction("ele-profile", "高程纵断面", demLayer, function () {
-                this.domInfo = $("#ele-profile-info");
-                var that = this;
-                $("#ele-profile-info .card-action a:last").click(function () {
-                    functionController.stop(that);
-                    that.domInfo.addClass("hide");
-                    $("#ele-profile-chart").addClass("hide");
-                    $("#mapDiv").css("bottom", "0");
-                });
-                $("#ele-profile-info .card-action a:first").click(function () {
-                    if (tb) {
-                        tb.deactivate();
-                    }
-                    map.enableMapNavigation();
-                    $("#ele-profile-info .card-action a:first").addClass("disabled");
-                });
-            });
-            epFunction.start = function () {
-                if (this.domInfo.hasClass("hide")) {
-                    this.domInfo.removeClass("hide");
-                    $("#ele-profile-chart").removeClass("hide");
-                    $("#mapDiv").css("bottom", $("#ele-profile-chart").css("height"));
-                }
-                if (!epWidget) {
-                    epWidget = new ElevationsProfileWidget(profileParams, "ele-profile-chart");
-                    epWidget.startup();
-                }
-            };
-            epFunction.stop = function () {
-                if (tb) {
-                    tb.deactivate();
-                }
-                $("#ele-profile-info .card-action a:first").addClass("disabled");
-                map.enableMapNavigation();
-                epWidget.clearProfile();
-                map.graphics.clear();
-            };
-            var eleList = ["Polyline", "FreehandPolyline"];
-            for (var ele in eleList) {
-                on(dom.byId(eleList[ele]), "click", function (evt) {
-                    functionController.start(epFunction);
-                    initToolbar(evt.target.id.toLowerCase());
-                    $("#ele-profile-info .card-action a:first").removeClass("disabled");
-                });
-            }
+             var epFunction = new FFunction("ele-profile", "高程纵断面", demLayer, function () {
+             this.domInfo = $("#ele-profile-info");
+             var that = this;
+             $("#ele-profile-info .card-action a:last").click(function () {
+             functionController.stop(that);
+             that.domInfo.addClass("hide");
+             $("#ele-profile-chart").addClass("hide");
+             $("#mapDiv").css("bottom", "0");
+             });
+             $("#ele-profile-info .card-action a:first").click(function () {
+             if (tb) {
+             tb.deactivate();
+             }
+             map.enableMapNavigation();
+             $("#ele-profile-info .card-action a:first").addClass("disabled");
+             });
+             });
+             epFunction.start = function () {
+             if (this.domInfo.hasClass("hide")) {
+             this.domInfo.removeClass("hide");
+             $("#ele-profile-chart").removeClass("hide");
+             $("#mapDiv").css("bottom", $("#ele-profile-chart").css("height"));
+             }
+             if (!epWidget) {
+             epWidget = new ElevationsProfileWidget(profileParams, "ele-profile-chart");
+             epWidget.startup();
+             }
+             };
+             epFunction.stop = function () {
+             if (tb) {
+             tb.deactivate();
+             }
+             $("#ele-profile-info .card-action a:first").addClass("disabled");
+             map.enableMapNavigation();
+             epWidget.clearProfile();
+             map.graphics.clear();
+             };
+             var eleList = ["Polyline", "FreehandPolyline"];
+             for (var ele in eleList) {
+             on(dom.byId(eleList[ele]), "click", function (evt) {
+             functionController.start(epFunction);
+             initToolbar(evt.target.id.toLowerCase());
+             $("#ele-profile-info .card-action a:first").removeClass("disabled");
+             });
+             }
 
-            //-----------------------------------------------------------------------------------
-            //------------------                    图层列表                  --------------------
-            //-----------------------------------------------------------------------------------
-            var layerListFunc = new FFunction("layer-list", null, global, function () {
-                var myWidget = new LayerList({
-                    map: map
-                    //layers: allLayers
-                }, "layer-list-content");
-                myWidget.startup();
-                this.dom = $("#layer-list");
-                this.widget = myWidget;
-                var that = this;
-                $("#layer-list .card-action a").click(function () {
-                    that.dom.addClass("hide");
-                    functionController.stop(that);
-                });
-            });
-            layerListFunc.start = function () {
-                this.dom.removeClass("hide");
-                this.widget.refresh();
-            };
-
+             //-----------------------------------------------------------------------------------
+             //------------------                    图层列表                  --------------------
+             //-----------------------------------------------------------------------------------
+             var layerListFunc = new FFunction("layer-list", null, global, function () {
+             var myWidget = new LayerList({
+             map: map
+             //layers: allLayerst
+             }, "layer-list-content");
+             myWidget.startup();
+             this.dom = $("#layer-list");
+             this.widget = myWidget;
+             var that = this;
+             $("#layer-list .card-action a").click(function () {
+             that.dom.addClass("hide");
+             functionConroller.stop(that);
+             });
+             });
+             layerListFunc.start = function () {
+             this.dom.removeClass("hide");
+             this.widget.refresh();
+             };
+             */
             //-----------------------------------------------------------------------------------
             //------------------                   气象播放                    --------------------
             //-----------------------------------------------------------------------------------
@@ -359,8 +387,8 @@
                 map.setTimeSlider(timeSlider);
 
                 var timeExtent = new TimeExtent();
-                timeExtent.startTime = new Date("12/11/2015 UTC");
-                timeExtent.endTime = new Date("12/25/2015 18:00:00 UTC");
+                timeExtent.startTime = new Date("12/30/2015 UTC");
+                timeExtent.endTime = new Date("1/13/2016 18:00:00 UTC");
                 timeSlider.setThumbCount(1);
                 timeSlider.createTimeStopsByTimeInterval(timeExtent, 6, "esriTimeUnitsHours");
                 timeSlider.setThumbIndexes([0]);
@@ -370,7 +398,7 @@
                 //add labels for every other time stop
                 var labels = arrayUtils.map(timeSlider.timeStops, function (timeStop, i) {
                     if (i % 4 === 0) {
-                        return timeStop.getUTCMonth() + '-' + timeStop.getUTCDate();
+                        return (timeStop.getUTCMonth() + 1) + '-' + timeStop.getUTCDate();
                     } else {
                         return "";
                     }
@@ -380,9 +408,13 @@
 
             });
 
-            forcastPlayFunc.start = function () {
-                $("#time-slider-card").removeClass("hide");
-            };
+            $("#forcast-play-btn").click(function () {
+                if ($("#time-slider-card").hasClass("hide")) {
+                    $("#time-slider-card").removeClass("hide");
+                } else {
+                    $("#time-slider-card").addClass("hide");
+                }
+            });
 
             //-----------------------------------------------------------------------------------
             //------------------                 天气预报查询                  --------------------
@@ -406,7 +438,7 @@
                             "   <textarea cols='50' rows='30' wrap='off' id='forcast-query-textarea' style='display:none'>" +
                             '{"Origins":[{"Origin":"ecmwf","DateStrs":[{"DateStr":"20150802","TimeSpans":[{"TimeStr":"00","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.070907823741436},{"Lon":110.625,"Lat":38.375,"Value":0.070907823741436},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.17726954817771912},{"Lon":110.375,"Lat":38.125,"Value":0.0},{"Lon":110.625,"Lat":38.125,"Value":0.01181797031313181},{"Lon":110.875,"Lat":38.125,"Value":0.0},{"Lon":111.125,"Lat":38.125,"Value":0.01181797031313181},{"Lon":111.375,"Lat":38.125,"Value":0.08272579312324524}]},{"TimeStr":"06","Datas":[{"Lon":110.375,"Lat":38.375,"Value":12.432504653930664},{"Lon":110.625,"Lat":38.375,"Value":14.760644912719727},{"Lon":110.875,"Lat":38.375,"Value":19.806917190551758},{"Lon":111.125,"Lat":38.375,"Value":16.533340454101562},{"Lon":111.375,"Lat":38.375,"Value":15.942441940307617},{"Lon":110.375,"Lat":38.125,"Value":12.160691261291504},{"Lon":110.625,"Lat":38.125,"Value":15.670628547668457},{"Lon":110.875,"Lat":38.125,"Value":23.139585494995117},{"Lon":111.125,"Lat":38.125,"Value":19.866008758544922},{"Lon":111.375,"Lat":38.125,"Value":17.419687271118164}]},{"TimeStr":"12","Datas":[{"Lon":110.375,"Lat":38.375,"Value":4.9517292976379395},{"Lon":110.625,"Lat":38.375,"Value":6.3698859214782715},{"Lon":110.875,"Lat":38.375,"Value":7.338959693908691},{"Lon":111.125,"Lat":38.375,"Value":6.251706123352051},{"Lon":111.375,"Lat":38.375,"Value":8.816205978393555},{"Lon":110.375,"Lat":38.125,"Value":10.009820938110352},{"Lon":110.625,"Lat":38.125,"Value":15.824261665344238},{"Lon":110.875,"Lat":38.125,"Value":21.01235008239746},{"Lon":111.125,"Lat":38.125,"Value":19.73600959777832},{"Lon":111.375,"Lat":38.125,"Value":17.384233474731445}]},{"TimeStr":"18","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.01181797031313181},{"Lon":110.625,"Lat":38.375,"Value":0.05908985063433647},{"Lon":110.875,"Lat":38.375,"Value":0.16545158624649048},{"Lon":111.125,"Lat":38.375,"Value":1.6545158624649048},{"Lon":111.375,"Lat":38.375,"Value":6.712606906890869},{"Lon":110.375,"Lat":38.125,"Value":0.04727188125252724},{"Lon":110.625,"Lat":38.125,"Value":0.6263524293899536},{"Lon":110.875,"Lat":38.125,"Value":1.9026931524276733},{"Lon":111.125,"Lat":38.125,"Value":5.152635097503662},{"Lon":111.375,"Lat":38.125,"Value":11.097073554992676}]}]},{"DateStr":"20150803","TimeSpans":[{"TimeStr":"00","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.0},{"Lon":110.625,"Lat":38.375,"Value":0.0},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.02363594062626362},{"Lon":110.375,"Lat":38.125,"Value":0.02363594062626362},{"Lon":110.625,"Lat":38.125,"Value":0.01181797031313181},{"Lon":110.875,"Lat":38.125,"Value":0.01181797031313181},{"Lon":111.125,"Lat":38.125,"Value":0.04727188125252724},{"Lon":111.375,"Lat":38.125,"Value":0.10636173188686371}]},{"TimeStr":"06","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.0},{"Lon":110.625,"Lat":38.375,"Value":0.0},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.0},{"Lon":110.375,"Lat":38.125,"Value":0.0},{"Lon":110.625,"Lat":38.125,"Value":0.0},{"Lon":110.875,"Lat":38.125,"Value":0.0},{"Lon":111.125,"Lat":38.125,"Value":0.0},{"Lon":111.375,"Lat":38.125,"Value":0.0}]},{"TimeStr":"12","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.0},{"Lon":110.625,"Lat":38.375,"Value":0.0},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.0},{"Lon":110.375,"Lat":38.125,"Value":0.0},{"Lon":110.625,"Lat":38.125,"Value":0.0},{"Lon":110.875,"Lat":38.125,"Value":0.0},{"Lon":111.125,"Lat":38.125,"Value":0.0},{"Lon":111.375,"Lat":38.125,"Value":0.0}]},{"TimeStr":"18","Datas":[{"Lon":110.375,"Lat":38.375,"Value":0.0},{"Lon":110.625,"Lat":38.375,"Value":0.0},{"Lon":110.875,"Lat":38.375,"Value":0.0},{"Lon":111.125,"Lat":38.375,"Value":0.0},{"Lon":111.375,"Lat":38.375,"Value":0.0},{"Lon":110.375,"Lat":38.125,"Value":0.0},{"Lon":110.625,"Lat":38.125,"Value":0.0},{"Lon":110.875,"Lat":38.125,"Value":0.0},{"Lon":111.125,"Lat":38.125,"Value":0.0},{"Lon":111.375,"Lat":38.125,"Value":0.0}]}]}]}]}' +
                             "   </textarea>" +
-                            "   <p><a href='dataquery.html' target='_blank'>高级</a></p>" +
+                            "   <p><a href='dataquery.jsp?lon=" + evt.geometry.getLongitude() + "&lat=" + evt.geometry.getLatitude() + "' target='_blank'>高级</a></p>" +
                             "</div>";
                     map.infoWindow.setContent(forcastQueryFunc.content);
                     map.infoWindow.show(map.toScreen(evt.geometry));
@@ -434,21 +466,20 @@
 <nav class="white">
     <div class="nav-wrapper">
         <ul class="left">
-            <li><a id="low-logo" class="dropdown-button black-text" href='#' data-activates="main-list"
-                   data-constrainwidth="false" data-hover="true" data-beloworigin="true">水联网通用平台<i
-                    class="material-icons left">apps</i></a></li>
+            <li><a id="low-logo" class="dropdown-button black-text" href='#' data-activates="page-list"
+                   data-hover="true" data-beloworigin="true"><span id="title_active"></span><i
+                    class="material-icons left" id="icon_active"></i></a></li>
         </ul>
         <ul class="right">
-            <li class="tooltipped" data-position="bottom" data-delay="0" data-tooltip="缩放至主视图"><a href="#"><i
-                    class="material-icons black-text">home</i></a></li>
-            <li class="tooltipped" data-position="bottom" data-delay="0" data-tooltip="图层列表" id="layer-list-btn"><a
-                    href="#"><i
-                    class="material-icons black-text">clear_all</i></a></li>
-            <li class="tooltipped dropdown-button" data-activates='basemap-chooser' data-beloworigin="true"
-                data-constrainwidth="false" data-position="bottom" data-delay="0" data-tooltip="选择底图"><a href="#"><i
-                    class="material-icons black-text">perm_media</i></a></li>
-            <li id="search-form">
-                <form>
+            <li><a href="#" class="dropdown-button black-text" data-activates="main-list"
+                   data-hover="false" data-beloworigin="true" data-constrainwidth="false">数据列表<i
+                    class="material-icons left">list</i></a></li>
+            <li><a href="#" class="black-text" id="forcast-play-btn">时间轴<i class="material-icons left">av_timer</i></a></li>
+            <li class="dropdown-button" data-activates='basemap-chooser' data-beloworigin="true"
+                data-constrainwidth="false"><a href="#" class="black-text">底图<i
+                    class="material-icons left">perm_media</i></a></li>
+            <li id="search-nav">
+                <form id="search-form">
                     <div class="input-field">
                         <input id="search" type="search" placeholder="查询地点、经纬度" required>
                         <label for="search"><i class="material-icons black-text">search</i></label>
@@ -459,16 +490,23 @@
         </ul>
     </div>
 </nav>
+<!-- page-list: 鼠标放在logo上后显示的下拉列表 -->
+<div id="page-list" class="dropdown-content" style="width: 500px">
+    <li><a id="url_link1"><span id="title_link1"></span><i class="material-icons left" id="icon_link1"></i></a></li>
+    <li><a id="url_link2"><span id="title_link2"></span><i class="material-icons left" id="icon_link2"></i></a></li>
+</div>
 <div id="basemap-chooser" class="dropdown-content" style="width:360px; overflow:auto;">
     <div id="basemap-gallery"></div>
 </div>
 <!-- main-list: 鼠标放在logo上后显示的下拉列表 -->
 <div id="main-list" class='dropdown-content'>
     <div class="row container">
+
         <ul class="col s3 low-tabs">
             <li class="tab active" id="basic-tab"><a>基本图层</a></li>
-            <li class="tab" id="slh-tab"><a>疏勒河灌区示范工程</a></li>
+            <!-- <li class="tab" id="slh-tab"><a>疏勒河灌区示范工程</a></li> -->
         </ul>
+
         <div class="col s9 black-text">
             <!-- 基本图层  -->
             <div id="basic-content" class="low-tabcontent">
@@ -496,7 +534,9 @@
                     <div class="col s6 m8 function">
                         <a class="waves-effect waves-light btn">数据说明</a>
                         <a class="waves-effect waves-light btn" id="query-dem-btn">高程查询</a>
+                        <!--
                         <a class="waves-effect waves-light btn" id="ele-profile-btn">高程纵断面</a>
+                        -->
                     </div>
                 </div>
                 <!-- 卫星降水  -->
@@ -509,7 +549,7 @@
                     <div class="col s6 m8 function">
                         <a class="waves-effect waves-light btn">数据说明</a>
                         <a class="waves-effect waves-light btn">降水查询</a>
-                        <a class="waves-effect waves-light btn">降水统计</a>
+                        <!--<a class="waves-effect waves-light btn">降水统计</a>-->
                     </div>
                 </div>
                 <!-- 天气预报  -->
@@ -521,12 +561,13 @@
                     </div>
                     <div class="col s6 m8 function">
                         <a class="waves-effect waves-light btn">数据说明</a>
-                        <a class="waves-effect waves-light btn" id="forcast-play-btn">气象播放</a>
+                        <!--<a class="waves-effect waves-light btn" id="forcast-play-btn">气象播放</a>-->
                         <a class="waves-effect waves-light btn" id="forcast-query-btn">预报降水查询</a>
                     </div>
                 </div>
             </div>
             <!-- 疏勒河专题图层  -->
+            <!--
             <div id="slh-content" class="low-tabcontent">
                 <div class="row hoverable" id="qudao-row">
                     <div class="col s6 m4 layer">
@@ -539,11 +580,13 @@
                     </div>
                 </div>
             </div>
+            -->
         </div>
     </div>
 </div>
 <div id="mapDiv">
     <!-- layerlist -->
+    <!--
     <div id="layer-list" class="card hide">
         <div class="card-content">
             <span class="card-title black-text">图层列表</span>
@@ -578,16 +621,15 @@
             <a href="#">关闭</a>
         </div>
     </div>
-
+-->
     <div id="time-slider-card" class="claro card hide">
         <div class="card-content" style="text-align: center">
-            <p>数据发布机构：欧洲(ECMWF)</p>
-
+            <!--<p>数据发布机构：欧洲(ECMWF)</p>-->
             <div id="time-slider"></div>
         </div>
     </div>
 </div>
-<div id="ele-profile-chart" class="hide"></div>
+<!--<div id="ele-profile-chart" class="hide"></div>-->
 
 </body>
 
